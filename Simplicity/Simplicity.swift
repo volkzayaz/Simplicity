@@ -12,7 +12,7 @@ import SafariServices
 /// Callback handler after an external login completes.
 public typealias ExternalLoginCallback = (String?, NSError?) -> Void
 
-/** 
+/**
  Simplicity is a framework for authenticating with external providers on iOS.
  */
 public final class Simplicity {
@@ -20,12 +20,15 @@ public final class Simplicity {
     private static var callback: ExternalLoginCallback?
     private static var safari: UIViewController?
     
+    @available(iOS 9.0, *)
+    private static weak var safariDelegate: SFSafariViewControllerDelegate?
+    
     /**
      Begin the login flow by redirecting to the LoginProvider's website.
      
      - parameters:
-       - loginProvider: The login provider object configured to be used.
-       - callback: A callback with the access token, or a SimplicityError.
+     - loginProvider: The login provider object configured to be used.
+     - callback: A callback with the access token, or a SimplicityError.
      */
     public static func login(_ loginProvider: LoginProvider, callback: @escaping ExternalLoginCallback) {
         self.currentLoginProvider = loginProvider
@@ -33,6 +36,16 @@ public final class Simplicity {
         
         presentSafariView(loginProvider.authorizationURL)
     }
+    
+    @available(iOS 9.0, *)
+    public static func safariLogin(_ loginProvider: LoginProvider,
+                                   safariDelegate: SFSafariViewControllerDelegate? = nil,
+                                   callback: @escaping ExternalLoginCallback) {
+        
+        self.safariDelegate = safariDelegate
+        self.login(loginProvider, callback: callback)
+    }
+    
     
     /// Deep link handler (iOS9)
     public static func application(_ app: UIApplication, open url: URL, options: [UIApplicationOpenURLOptionsKey: Any]) -> Bool {
@@ -53,7 +66,10 @@ public final class Simplicity {
     
     private static func presentSafariView(_ url: URL) {
         if #available(iOS 9, *) {
-            safari = SFSafariViewController(url: url)
+            let s = SFSafariViewController(url: url)
+            s.delegate = safariDelegate
+            safari = s
+            
             var topController = UIApplication.shared.keyWindow?.rootViewController
             while let vc = topController?.presentedViewController {
                 topController = vc
@@ -63,4 +79,5 @@ public final class Simplicity {
             UIApplication.shared.openURL(url)
         }
     }
+    
 }
